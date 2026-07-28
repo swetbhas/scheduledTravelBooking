@@ -1,0 +1,6 @@
+alert_id,case_id,traveler_id,sent_at,channel,recommendation,flight_ids,human_response,status,notes
+ALT-7001,CASE-1004,TRV-1001,2026-07-25T09:00:00-05:00,email_sms,Book Now,FL-DEMO-507,rejected,closed,Traveler rejected this option and asked the agent to keep monitoring.
+ALT-7002,CASE-1006,TRV-1001,2026-07-26T08:30:00-05:00,email_sms,Book Now,FL-DEMO-511,pending,sent,Same fare was already sent less than 24 hours before this check.
+ALT-7003,CASE-1009,TRV-1001,2026-07-24T15:00:00-05:00,email_sms,Wait,FL-DEMO-517,none,monitoring,Previous price was 2025; latest snapshot dropped to 1745.
+ALT-7004,CASE-1010,TRV-1001,2026-07-26T14:10:00-05:00,email_sms,Book Now,FL-DEMO-519,none,expired,No response before the two-day boundary.
+ALT-7005,CASE-1015,TRV-1001,2026-07-25T13:00:00-05:00,email_sms,Wait,FL-DEMO-528,none,monitoring,Fares were near budget but not strong enough for a new alert.

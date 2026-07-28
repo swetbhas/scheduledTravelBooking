@@ -1,0 +1,25 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "dallas_to_london_initial_intake",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "I need to travel from Dallas to London.\nDepart July 10\nReturn July 18\nBudget under $900\nPrefer nonstop\nWindow +/-2 days"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "{\"origin\":\"DFW\",\"destination\":\"LHR\",\"depart\":\"2027-07-10\",\"return\":\"2027-07-18\",\"budget\":900,\"nonstop\":true,\"flexibility\":2}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

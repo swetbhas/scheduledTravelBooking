@@ -1,0 +1,88 @@
+{
+  "eval_cases": [
+    {
+      "prompt": {
+        "parts": [
+          {
+            "text": "I need to travel from Dallas to London.\nDepart July 10\nReturn July 18\nBudget under $900\nPrefer nonstop\nWindow +/-2 days"
+          }
+        ],
+        "role": "user"
+      },
+      "responses": [
+        {
+          "response": {
+            "parts": [
+              {
+                "text": "{\"origin\":\"DFW\",\"destination\":\"LHR\",\"depart\":\"2027-07-10\",\"return\":\"2027-07-18\",\"budget\":900,\"nonstop\":true,\"flexibility\":2}"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ],
+      "reference": {
+        "response": {
+          "parts": [
+            {
+              "text": "{\"origin\":\"DFW\",\"destination\":\"LHR\",\"depart\":\"2027-07-10\",\"return\":\"2027-07-18\",\"budget\":900,\"nonstop\":true,\"flexibility\":2}"
+            }
+          ],
+          "role": "model"
+        }
+      },
+      "eval_case_id": "dallas_to_london_initial_intake",
+      "agent_data": {
+        "agents": {
+          "travel_planner_agent": {
+            "agent_id": "travel_planner_agent",
+            "agent_type": "LlmAgent",
+            "description": "",
+            "instruction": "You are a travel planner intake agent. Your only job is to convert the traveler's initial request into strict JSON with these keys: origin, destination, depart, return, budget, nonstop, flexibility. Use IATA airport codes when a city maps clearly to a known airport. Dates must be ISO-8601 YYYY-MM-DD. If the user omits the year, choose the next future occurrence of that month and day. Use null for missing fields. Call parse_travel_request_json, then return exactly the JSON string it produces and no markdown or explanation.",
+            "tools": [
+              {
+                "function_declarations": [
+                  {
+                    "description": "Return the extracted travel request as compact JSON.",
+                    "name": "parse_travel_request_json",
+                    "parameters": {
+                      "properties": {
+                        "request": {
+                          "type": "STRING"
+                        }
+                      },
+                      "required": [
+                        "request"
+                      ],
+                      "type": "OBJECT"
+                    }
+                  }
+                ]
+              }
+            ],
+            "sub_agents": []
+          }
+        },
+        "turns": [
+          {
+            "turn_index": 0,
+            "turn_id": "turn_0",
+            "events": [
+              {
+                "author": "travel_planner_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "{\"origin\":\"DFW\",\"destination\":\"LHR\",\"depart\":\"2027-07-10\",\"return\":\"2027-07-18\",\"budget\":900,\"nonstop\":true,\"flexibility\":2}"
+                    }
+                  ],
+                  "role": "model"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

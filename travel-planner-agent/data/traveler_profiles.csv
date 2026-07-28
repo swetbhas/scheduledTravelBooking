@@ -1,0 +1,2 @@
+traveler_id,name,email,home_airport,loyalty_tier,default_budget_usd,default_departure_window,default_max_stops,default_baggage_required,seat_preference,alert_channels,alert_frequency_limit_hours,created_for_demo
+TRV-1001,Alex Morgan,alex.morgan.demo@example.com,AUS,Bronze,2000,evening,1,yes,window,email_sms,24,true
