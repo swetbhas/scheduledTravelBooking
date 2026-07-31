@@ -92,6 +92,14 @@ def test_root_serves_traveler_form() -> None:
     assert "/api/traveler/request" in response.text
     assert "/api/traveler/chat" in response.text
     assert "An email/SMS will be send" in response.text
+    assert "<th>Reason</th>" in response.text
+    assert "<th>Outbound</th>" in response.text
+    assert "<th>Return</th>" in response.text
+    assert "<th>Source</th>" not in response.text
+    assert "Booking/API Source" not in response.text
+    assert 'aria-label="Booking"' in response.text
+    assert "Accept" in response.text
+    assert "Reject" in response.text
 
 
 def test_traveler_form_submission_parses_request() -> None:
@@ -166,8 +174,8 @@ def test_traveler_form_submission_runs_immediate_exact_fare_monitor() -> None:
         json={
             "origin": "AUS",
             "destination": "CDG",
-            "depart": "2026-07-30",
-            "return_date": "2026-08-04",
+            "depart": "2026-08-20",
+            "return_date": "2026-08-25",
             "budget": 3002,
             "max_stops": 2,
             "baggage_included": True,
@@ -179,9 +187,42 @@ def test_traveler_form_submission_runs_immediate_exact_fare_monitor() -> None:
     payload = response.json()
     assert payload["monitor_result"]["status"] == "STOP CONDITION MET"
     assert payload["monitor_result"]["rows"][0]["flight_id"] == "FL-DEMO-526"
+    assert payload["monitor_result"]["rows"][0]["return_depart_datetime"].startswith("2026-08-25T")
+    assert payload["monitor_result"]["rows"][0]["return_arrive_datetime"].startswith("2026-08-25T")
     assert "Pioneer Wings" in payload["monitor_result"]["codex_table_markdown"]
+    assert "| Airline | Dates | Outbound | Return | Stops | Price | Baggage | Reason |" in payload["monitor_result"]["codex_table_markdown"]
+    assert "CDG " in payload["monitor_result"]["codex_table_markdown"]
+    assert " -> AUS " in payload["monitor_result"]["codex_table_markdown"]
+    assert "Booking/API Source" not in payload["monitor_result"]["codex_table_markdown"]
+    assert "data/flight_snapshots.csv" not in payload["monitor_result"]["codex_table_markdown"]
     assert payload["next_step"]["immediate_run"] == "completed"
     assert payload["next_step"]["schedule"] == "Every 2 hours"
+
+
+def test_traveler_form_submission_runs_july_happy_path_monitor() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/traveler/request",
+        json={
+            "origin": "AUS",
+            "destination": "CDG",
+            "depart": "2026-07-30",
+            "return_date": "2026-08-04",
+            "budget": 2000,
+            "max_stops": 1,
+            "baggage_included": True,
+            "recipient_email": "er.shwetabhaskar@gmail.com",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["monitor_result"]["status"] == "STOP CONDITION MET"
+    assert payload["monitor_result"]["rows"][0]["case_id"] == "CASE-1016"
+    assert payload["monitor_result"]["rows"][0]["return_depart_datetime"].startswith("2026-08-04T")
+    assert payload["monitor_result"]["rows"][0]["return_arrive_datetime"].startswith("2026-08-04T")
+    assert "2026-07-30 to 2026-08-04" in payload["monitor_result"]["codex_table_markdown"]
 
 
 def test_traveler_chat_submission_parses_request_and_runs_monitor() -> None:
@@ -191,8 +232,8 @@ def test_traveler_chat_submission_parses_request_and_runs_monitor() -> None:
         "/api/traveler/chat",
         json={
             "request": (
-                "I need a round trip from Austin to Paris. Depart July 30 2026. "
-                "Return August 4 2026. Budget 3002. Up to 2 stops. Baggage included."
+                "I need a round trip from Austin to Paris. Depart August 20 2026. "
+                "Return August 25 2026. Budget 3002. Up to 2 stops. Baggage included."
             ),
             "traveler_email": "traveler@example.com",
             "recipient_email": "er.shwetabhaskar@gmail.com",
@@ -204,8 +245,8 @@ def test_traveler_chat_submission_parses_request_and_runs_monitor() -> None:
     assert payload["intake_mode"] == "chat"
     assert payload["parsed"]["origin"] == "AUS"
     assert payload["parsed"]["destination"] == "CDG"
-    assert payload["parsed"]["depart"] == "2026-07-30"
-    assert payload["parsed"]["return"] == "2026-08-04"
+    assert payload["parsed"]["depart"] == "2026-08-20"
+    assert payload["parsed"]["return"] == "2026-08-25"
     assert payload["preferences"] == {"max_stops": 2, "baggage_included": True}
     assert payload["monitor_result"]["status"] == "STOP CONDITION MET"
 
@@ -217,16 +258,16 @@ def test_traveler_chat_submission_parses_numeric_dates() -> None:
         "/api/traveler/chat",
         json={
             "request": (
-                "I need a round trip from Austin to Paris. Depart 7/30/2026. "
-                "Return 8/4/2026. Budget 3002. Up to 2 stops. Baggage included."
+                "I need a round trip from Austin to Paris. Depart 8/20/2026. "
+                "Return 8/25/2026. Budget 3002. Up to 2 stops. Baggage included."
             ),
         },
     )
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["parsed"]["depart"] == "2026-07-30"
-    assert payload["parsed"]["return"] == "2026-08-04"
+    assert payload["parsed"]["depart"] == "2026-08-20"
+    assert payload["parsed"]["return"] == "2026-08-25"
     assert payload["monitor_result"]["status"] == "STOP CONDITION MET"
 
 
@@ -237,8 +278,8 @@ def test_traveler_chat_submission_parses_month_day_range() -> None:
         "/api/traveler/chat",
         json={
             "request": (
-                "I would book a round trip from Austin to Paris from July 30th "
-                "to August 4th with a budget of $3000"
+                "I would book a round trip from Austin to Paris from August 20th "
+                "to August 25th with a budget of $3000"
             ),
         },
     )
@@ -247,8 +288,8 @@ def test_traveler_chat_submission_parses_month_day_range() -> None:
     payload = response.json()
     assert payload["parsed"]["origin"] == "AUS"
     assert payload["parsed"]["destination"] == "CDG"
-    assert payload["parsed"]["depart"] == "2026-07-30"
-    assert payload["parsed"]["return"] == "2026-08-04"
+    assert payload["parsed"]["depart"] == "2026-08-20"
+    assert payload["parsed"]["return"] == "2026-08-25"
 
 
 def test_shared_codex_credentials_load_from_runtime_path(tmp_path, monkeypatch) -> None:

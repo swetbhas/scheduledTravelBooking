@@ -493,6 +493,46 @@ def _traveler_form_html() -> str:
       font-weight: 800;
       line-height: 1.45;
     }
+    .booking-section {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+      border: 1px solid rgba(0, 109, 119, 0.2);
+      border-radius: 8px;
+      background: rgba(232, 246, 244, 0.9);
+      padding: 14px;
+    }
+    .booking-section h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 1.04rem;
+      letter-spacing: 0;
+    }
+    .booking-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .booking-choice {
+      width: 100%;
+    }
+    .reject-button {
+      background: linear-gradient(135deg, #8f2d56, var(--coral));
+    }
+    .booking-confirm {
+      width: 100%;
+      background: linear-gradient(135deg, var(--ok), var(--accent));
+    }
+    .booking-status {
+      min-height: 1.25rem;
+      color: var(--accent-dark);
+      font-size: 0.88rem;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+    .is-hidden {
+      display: none;
+    }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -597,10 +637,10 @@ def _traveler_form_html() -> str:
             <input name="destination" value="CDG" autocomplete="off" required>
           </label>
           <label>Depart
-            <input name="depart" type="date" value="2026-07-30" required>
+            <input name="depart" type="date" value="2026-08-20" required>
           </label>
           <label>Return
-            <input name="return_date" type="date" value="2026-08-04">
+            <input name="return_date" type="date" value="2026-08-25">
           </label>
           <label>Budget
             <input name="budget" type="number" min="0" value="3000">
@@ -640,6 +680,15 @@ def _traveler_form_html() -> str:
           <div class="empty-state">Fill out the trip and run the monitor. Results will appear here as a fare table.</div>
         </div>
       </aside>
+      <section id="booking-section" class="booking-section is-hidden" aria-label="Booking" aria-hidden="true">
+        <h3>Booking</h3>
+        <div class="booking-actions">
+          <button id="booking-accept" class="booking-choice accept-button" type="button">Accept</button>
+          <button id="booking-reject" class="booking-choice reject-button" type="button">Reject</button>
+        </div>
+        <button id="booking-confirm" class="booking-confirm is-hidden" type="button" aria-hidden="true">Booking</button>
+        <div id="booking-status" class="booking-status" aria-live="polite"></div>
+      </section>
     </section>
   </main>
   <section class="alex-widget" aria-label="Alex chat assistant">
@@ -650,7 +699,7 @@ def _traveler_form_html() -> str:
       </div>
       <div class="chat-box">
         <label>Request
-          <textarea id="chat-request" placeholder="I need a round trip from Austin to Paris. Depart 7/30/2026. Return 8/4/2026. Budget 3002. Up to 2 stops. Baggage included."></textarea>
+          <textarea id="chat-request" placeholder="I need a round trip from Austin to Paris. Depart 8/20/2026. Return 8/25/2026. Budget 3002. Up to 2 stops. Baggage included."></textarea>
         </label>
         <div class="chat-actions">
           <span id="voice-status" class="voice-status">Use text, voice, or the manual fields.</span>
@@ -675,7 +724,13 @@ def _traveler_form_html() -> str:
     const chatSubmit = document.querySelector("#chat-submit");
     const voiceButton = document.querySelector("#voice-button");
     const voiceStatus = document.querySelector("#voice-status");
+    const bookingSection = document.querySelector("#booking-section");
+    const acceptButton = document.querySelector("#booking-accept");
+    const rejectButton = document.querySelector("#booking-reject");
+    const bookingButton = document.querySelector("#booking-confirm");
+    const bookingStatus = document.querySelector("#booking-status");
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const emptyMonitorHtml = '<div class="empty-state">Fill out the trip and run the monitor. Results will appear here as a fare table.</div>';
     let recognition = null;
 
     function escapeHtml(value) {
@@ -699,6 +754,12 @@ def _traveler_form_html() -> str:
       return "Not parsed yet";
     }
 
+    function fareReason(row) {
+      const stops = Number(row.stops) === 0 ? "nonstop" : `${row.stops} stop${Number(row.stops) === 1 ? "" : "s"}`;
+      const baggage = row.baggage_included === "yes" ? "baggage included" : "baggage not included";
+      return `Verified available round-trip fare within budget with ${stops} and ${baggage}; ranked by price, stops, and duration.`;
+    }
+
     function renderRows(rows) {
       if (!rows || rows.length === 0) {
         return '<div class="empty-state">No exact fare match yet. The two-hour monitor will keep watching.</div>';
@@ -708,10 +769,11 @@ def _traveler_form_html() -> str:
           <td><strong>${escapeHtml(row.airline)}</strong></td>
           <td>${escapeHtml(row.case_depart)} to ${escapeHtml(row.case_return)}</td>
           <td>${escapeHtml(row.depart_airport)} ${formatTime(row.depart_datetime)} -> ${escapeHtml(row.arrive_airport)} ${formatTime(row.arrive_datetime)}</td>
+          <td>${escapeHtml(row.arrive_airport)} ${formatTime(row.return_depart_datetime)} -> ${escapeHtml(row.depart_airport)} ${formatTime(row.return_arrive_datetime)}</td>
           <td>${escapeHtml(row.stops)}</td>
           <td class="price">$${Number(row.price_usd).toLocaleString()}</td>
           <td>${row.baggage_included === "yes" ? "Included" : "Not included"}</td>
-          <td>${escapeHtml(row.snapshot_id)} / ${escapeHtml(row.flight_id)} / ${escapeHtml(row.case_id)}</td>
+          <td>${escapeHtml(fareReason(row))}</td>
         </tr>
       `).join("");
       return `
@@ -720,11 +782,12 @@ def _traveler_form_html() -> str:
             <tr>
               <th>Airline</th>
               <th>Dates</th>
-              <th>Times</th>
+              <th>Outbound</th>
+              <th>Return</th>
               <th>Stops</th>
               <th>Price</th>
               <th>Baggage</th>
-              <th>Source</th>
+              <th>Reason</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
@@ -741,6 +804,43 @@ def _traveler_form_html() -> str:
         </div>
       `;
     }
+
+    function resetBookingControls() {
+      bookingButton.classList.add("is-hidden");
+      bookingButton.setAttribute("aria-hidden", "true");
+      bookingStatus.textContent = "";
+    }
+
+    function showBookingSection() {
+      resetBookingControls();
+      bookingSection.classList.remove("is-hidden");
+      bookingSection.setAttribute("aria-hidden", "false");
+    }
+
+    function hideBookingSection() {
+      resetBookingControls();
+      bookingSection.classList.add("is-hidden");
+      bookingSection.setAttribute("aria-hidden", "true");
+    }
+
+    function resetMonitorResult() {
+      output.innerHTML = emptyMonitorHtml;
+      hideBookingSection();
+    }
+
+    acceptButton.addEventListener("click", () => {
+      bookingButton.classList.remove("is-hidden");
+      bookingButton.setAttribute("aria-hidden", "false");
+      bookingStatus.textContent = "Accepted. Use Booking to continue the simulated approval flow.";
+    });
+
+    rejectButton.addEventListener("click", () => {
+      resetMonitorResult();
+    });
+
+    bookingButton.addEventListener("click", () => {
+      bookingStatus.textContent = "Booking request captured. Final booking remains pending traveler approval.";
+    });
 
     function renderResult(data) {
       const monitor = data.monitor_result || {};
@@ -764,9 +864,15 @@ def _traveler_form_html() -> str:
           <pre class="json-details">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
         </details>
       `;
+      if (rows.length > 0) {
+        showBookingSection();
+      } else {
+        hideBookingSection();
+      }
     }
 
     async function submitPayload(url, payload) {
+      hideBookingSection();
       output.innerHTML = '<div class="empty-state">Running immediate fare monitor...</div>';
       const response = await fetch(url, {
         method: "POST",
@@ -780,6 +886,7 @@ def _traveler_form_html() -> str:
     chatSubmit.addEventListener("click", async () => {
       const request = chatRequest.value.trim();
       if (!request) {
+        hideBookingSection();
         output.innerHTML = '<div class="empty-state">Add a conversational travel request first.</div>';
         return;
       }
@@ -791,6 +898,7 @@ def _traveler_form_html() -> str:
           recipient_email: formData.get("recipient_email") || null
         });
       } catch (error) {
+        hideBookingSection();
         output.innerHTML = `<div class="empty-state">${escapeHtml(String(error))}</div>`;
       }
     });
@@ -850,6 +958,7 @@ def _traveler_form_html() -> str:
       try {
         await submitPayload("/api/traveler/request", payload);
       } catch (error) {
+        hideBookingSection();
         output.innerHTML = `<div class="empty-state">${escapeHtml(String(error))}</div>`;
       }
     });
@@ -979,31 +1088,39 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(file))
 
 
-def _format_time(value: str) -> str:
+def _format_time(value: str | None) -> str:
+    if not value:
+        return ""
     parsed = dt.datetime.fromisoformat(value)
     return parsed.strftime("%H:%M")
 
 
-def _booking_source(row: dict[str, Any]) -> str:
+def _fare_reason(row: dict[str, Any]) -> str:
+    stops = "nonstop" if int(row["stops"]) == 0 else f"{row['stops']} stop"
+    if int(row["stops"]) > 1:
+        stops += "s"
+    baggage = "baggage included" if row["baggage_included"] == "yes" else "baggage not included"
     return (
-        "data/flight_snapshots.csv "
-        f"{row['snapshot_id']} / {row['flight_id']} / {row['case_id']}"
+        "Verified available round-trip fare within budget with "
+        f"{stops} and {baggage}; ranked by price, stops, and duration."
     )
 
 
 def _fare_table_markdown(rows: list[dict[str, Any]]) -> str:
     header = (
-        "| Airline | Dates | Times | Stops | Price | Baggage | Booking/API Source |\n"
-        "|---|---|---|---:|---:|---|---|"
+        "| Airline | Dates | Outbound | Return | Stops | Price | Baggage | Reason |\n"
+        "|---|---|---|---|---:|---:|---|---|"
     )
     body = [
         (
             f"| {row['airline']} | {row['case_depart']} to {row['case_return']} | "
             f"{row['depart_airport']} {_format_time(row['depart_datetime'])} -> "
             f"{row['arrive_airport']} {_format_time(row['arrive_datetime'])} | "
+            f"{row['arrive_airport']} {_format_time(row['return_depart_datetime'])} -> "
+            f"{row['depart_airport']} {_format_time(row['return_arrive_datetime'])} | "
             f"{row['stops']} | ${int(row['price_usd']):,} | "
             f"{'Included' if row['baggage_included'] == 'yes' else 'Not included'} | "
-            f"`{_booking_source(row)}` |"
+            f"{_fare_reason(row)} |"
         )
         for row in rows
     ]

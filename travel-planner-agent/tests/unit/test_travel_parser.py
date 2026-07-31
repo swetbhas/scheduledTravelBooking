@@ -62,12 +62,12 @@ def test_parse_structured_json_request() -> None:
 
 
 def test_parse_route_with_date_to_depart_phrase() -> None:
-    request = "travel from aus to Paris date to depart July 30"
+    request = "travel from aus to Paris date to depart August 20 2026"
 
     assert parse_travel_request(request) == {
         "origin": "AUS",
         "destination": "CDG",
-        "depart": "2026-07-30",
+        "depart": "2026-08-20",
         "return": None,
         "budget": None,
         "nonstop": False,
@@ -77,15 +77,15 @@ def test_parse_route_with_date_to_depart_phrase() -> None:
 
 def test_parse_round_trip_from_phrase() -> None:
     request = (
-        "I need a round trip from Austin to Paris. Depart July 30 2026. "
-        "Return August 4 2026. Budget 3002. Up to 2 stops. Baggage included."
+        "I need a round trip from Austin to Paris. Depart August 20 2026. "
+        "Return August 25 2026. Budget 3002. Up to 2 stops. Baggage included."
     )
 
     assert parse_travel_request(request) == {
         "origin": "AUS",
         "destination": "CDG",
-        "depart": "2026-07-30",
-        "return": "2026-08-04",
+        "depart": "2026-08-20",
+        "return": "2026-08-25",
         "budget": 3002,
         "nonstop": False,
         "flexibility": None,
@@ -94,15 +94,15 @@ def test_parse_round_trip_from_phrase() -> None:
 
 def test_parse_numeric_conversational_dates() -> None:
     request = (
-        "I need a round trip from Austin to Paris. Depart 7/30/2026. "
-        "Return 8/4/2026. Budget 3002. Up to 2 stops. Baggage included."
+        "I need a round trip from Austin to Paris. Depart 8/20/2026. "
+        "Return 8/25/2026. Budget 3002. Up to 2 stops. Baggage included."
     )
 
     assert parse_travel_request(request) == {
         "origin": "AUS",
         "destination": "CDG",
-        "depart": "2026-07-30",
-        "return": "2026-08-04",
+        "depart": "2026-08-20",
+        "return": "2026-08-25",
         "budget": 3002,
         "nonstop": False,
         "flexibility": None,
@@ -111,15 +111,15 @@ def test_parse_numeric_conversational_dates() -> None:
 
 def test_parse_month_day_range_after_route() -> None:
     request = (
-        "I would book a round trip from Austin to Paris from July 30th "
-        "to August 4th with a budget of $3000"
+        "I would book a round trip from Austin to Paris from August 20th "
+        "to August 25th with a budget of $3000"
     )
 
     assert parse_travel_request(request) == {
         "origin": "AUS",
         "destination": "CDG",
-        "depart": "2026-07-30",
-        "return": "2026-08-04",
+        "depart": "2026-08-20",
+        "return": "2026-08-25",
         "budget": 3000,
         "nonstop": False,
         "flexibility": None,
@@ -128,14 +128,14 @@ def test_parse_month_day_range_after_route() -> None:
 
 def test_parse_compact_route_with_budget_and_nostop() -> None:
     request = (
-        "travel from aus to Paris date to depart July 30 "
+        "travel from aus to Paris date to depart August 20 2026 "
         "return Sep 13 budget 3000 nostop"
     )
 
     assert parse_travel_request(request) == {
         "origin": "AUS",
         "destination": "CDG",
-        "depart": "2026-07-30",
+        "depart": "2026-08-20",
         "return": "2026-09-13",
         "budget": 3000,
         "nonstop": True,
